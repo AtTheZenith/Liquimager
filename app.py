@@ -1,16 +1,20 @@
 """Liquimager App."""
-from PIL import Image, ImageDraw, ImageFont
-from threading import Thread
+
+from time import time
+from typing import Callable
+
 import customtkinter as ctk
+from PIL import Image, ImageDraw, ImageFont
+
 from ui_elements import (
-    Label,
     FileButton,
     FileButtonSeperator,
-    Slider,
-    MainFrame,
     FramesSeperator,
-    ImageLabel,
     ImageFrame,
+    ImageLabel,
+    Label,
+    MainFrame,
+    Slider,
 )
 
 
@@ -18,20 +22,20 @@ class ImageManager:
     """Image Manager Class because my procedural methods didn't work."""
 
     def __init__(self):
-        self.orig_image = None
-        self.image = None
-        self.width_image = 0
-        self.height_image = 0
+        self._orig_image = None
+        self._image = None
+        self._width_image = 0
+        self._height_image = 0
 
     def set_new_image(self, new_image: Image.Image):
         """Sets a new image.
-        \nnew_image: The image to be set.
+        new_image: The image to be set.
         \n*args: None | **kwargs: None
         """
 
-        self.orig_image = new_image
-        self.image = new_image.copy()
-        self.width_image, self.height_image = new_image.size
+        self._orig_image = new_image.convert("RGBA")
+        self._image = self._orig_image.copy()
+        self._width_image, self._height_image = self._orig_image.size
 
     def update_image(self, new_image: Image.Image):
         """Updates the current image.
@@ -39,8 +43,8 @@ class ImageManager:
         \n*args: None | **kwargs: None
         """
 
-        self.image = new_image.copy()
-        self.width_image, self.height_image = new_image.size
+        self._image = new_image.convert("RGBA")
+        self._width_image, self._height_image = new_image.size
 
     def delete_image(self):
         """Deletes the selected image.
@@ -48,7 +52,7 @@ class ImageManager:
         \n*args: None | **kwargs: None
         """
 
-        self.orig_image, self.image, self.width_image, self.height_image = (
+        self._orig_image, self._image, self._width_image, self._height_image = (
             None,
             None,
             0,
@@ -68,13 +72,25 @@ class ImageManager:
 
         scale = max(x_scale, y_scale)
 
-        return (int(self.width_image / scale), int(self.height_image / scale))
+        return (int(self._width_image / scale), int(self._height_image / scale))
+
+    def get_orig_image(self) -> Image.Image:
+        """Returns the original image.
+        \n*args: None | **kwargs: None
+        """
+        return (self._orig_image and self._orig_image or Image.new(mode="RGBA", size=(0, 0)))
 
     def get_image(self) -> Image.Image:
         """Returns the current image.
         \n*args: None | **kwargs: None
         """
-        return self.image or Image.new(mode="RGBA", size=(0, 0))
+        return self._image or Image.new(mode="RGBA", size=(0, 0))
+
+    def get_image_size(self) -> tuple:
+        """Returns the size of the current image as a tuple.
+        \n*args: None | **kwargs: None
+        """
+        return (self._width_image, self._height_image)
 
 
 im = ImageManager()
@@ -94,8 +110,15 @@ class App(ctk.CTk):
         ##################################################
 
         main_frame = MainFrame(self)
+
         file_button = FileButton(main_frame)
         FileButtonSeperator(main_frame)
+
+        Label(master=main_frame, position=(17, 100), text="Horizontal Position")
+        Label(master=main_frame, position=(17, 150), text="Vertical Position")
+
+        x_slider = Slider(master=main_frame, position=(24, 125))
+        y_slider = Slider(master=main_frame, position=(24, 175))
 
         FramesSeperator(self)
 
@@ -106,46 +129,91 @@ class App(ctk.CTk):
         # Callbacks                                      #
         ##################################################
 
+        def set_option_access(access: bool):
+            """ """
+            for item in [x_slider, y_slider]:
+                if isinstance(item, ctk.CTkSlider):
+                    item.set(0)
+                    item.configure(to=im.get_image_size()[1] or 1)
+                item.configure(state=(access and "normal" or "disabled"))
+
+        set_option_access(access=False)
+
+        def refresh_closure() -> Callable:
+            last_call = time()
+            image = im.get_orig_image()
+
+            def refresh_image(_):
+                nonlocal last_call, image
+                if time() - last_call < 0.033:
+                    print("debounce")
+                    return
+
+                last_call = time()
+                print("undebounce")
+
+                x_pos, y_pos = x_slider.get(), y_slider.get()
+
+                if im.get_orig_image() != image:
+                    image = im.get_orig_image()
+
+                watermark = image.copy()
+                drawing = ImageDraw.Draw(watermark, "RGBA")
+
+                font_name = "arial"
+                font = ImageFont.truetype(f"C:/Windows/Fonts/{font_name}.ttf", size=40)
+
+                drawing.text(
+                    xy   = (x_pos, y_pos),
+                    text = "Watermark",
+                    fill = (255, 255, 255, 128),
+                    font = font,
+                )
+
+                im.update_image(watermark)
+
+                image_label.configure(
+                    image=ctk.CTkImage(
+                        dark_image=im.get_image(),
+                        size=im.fit_image(image=im.get_image(), width=720, height=520),
+                    )
+                )
+
+            return refresh_image
+
+        ref_fun = refresh_closure()
+
         def open_image():
             """Callback for file_button, manages the image selection.
             *args: None | **kwargs: None
             """
 
-            if im.orig_image is None:
-                file_path = ctk.filedialog.askopenfilename(
-                    filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.jfif")]
-                )
+            if im.get_image_size() == (0, 0):
+                file_path = ctk.filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.jfif")])
 
                 if file_path:
-                    im.set_new_image(
-                        new_image=Image.open(file_path)
-                        or Image.new(mode = "RGBA", size = (0, 0))
-                    )
-
+                    im.set_new_image(new_image=Image.open(file_path))
                     file_button.configure(text="Remove File")
-
-                    image_label.configure(
-                        text="No Image Selected",
-                        image=ctk.CTkImage(
-                            dark_image = im.get_image(),
-                            size = im.fit_image(
-                                image = im.get_image(),
-                                width = 720,
-                                height = 520,
-                            ),
-                        ),
-                    )
+                    set_option_access(access=True)
+                    image_label.configure(text="")
+                    ref_fun(0)
             else:
                 im.delete_image()
                 file_button.configure(text="Open File")
-                image_label.configure(text="No Image Selected",
-                    image = ctk.CTkImage(
-                        dark_image=im.get_image(),
-                        size=(0, 0)
-                    ),
+                set_option_access(access=False)
+                image_label.configure(
+                    text="No Image Selected",
+                    image=ctk.CTkImage(dark_image=Image.new(mode="RGBA", size=(0, 0)), size=(0, 0)),
                 )
 
+        ##################################################
+        # Callback binding                               #
+        ##################################################
+
         file_button.configure(command=open_image)
+        x_slider.configure(command=ref_fun)
+        y_slider.configure(command=ref_fun)
+
 
 if __name__ == "__main__":
     App().mainloop()
