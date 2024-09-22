@@ -1,7 +1,7 @@
 """Liquimager App."""
 
 from time import time
-from typing import Callable
+from typing import Callable#, Union
 
 import customtkinter as ctk
 from PIL import Image, ImageDraw, ImageFont
@@ -14,7 +14,9 @@ from ui_elements import (
     ImageLabel,
     Label,
     MainFrame,
+    NumberField,
     Slider,
+    # TextField
 )
 
 
@@ -27,7 +29,7 @@ class ImageManager:
         self._width_image = 0
         self._height_image = 0
 
-    def set_new_image(self, new_image: Image.Image):
+    def set_new_image(self, new_image: Image.Image) -> None:
         """Sets a new image.
         new_image: The image to be set.
         \n*args: None | **kwargs: None
@@ -37,7 +39,7 @@ class ImageManager:
         self._image = self._orig_image.copy()
         self._width_image, self._height_image = self._orig_image.size
 
-    def update_image(self, new_image: Image.Image):
+    def update_image(self, new_image: Image.Image) -> None:
         """Updates the current image.
         \nnew_image: The image to be set.
         \n*args: None | **kwargs: None
@@ -46,18 +48,13 @@ class ImageManager:
         self._image = new_image.convert("RGBA")
         self._width_image, self._height_image = new_image.size
 
-    def delete_image(self):
+    def delete_image(self) -> None:
         """Deletes the selected image.
         \nnew_image: The image to be set.
         \n*args: None | **kwargs: None
         """
 
-        self._orig_image, self._image, self._width_image, self._height_image = (
-            None,
-            None,
-            0,
-            0,
-        )
+        self._orig_image, self._image, self._width_image, self._height_image = (None, None,0,0)
 
     def fit_image(self, image: Image.Image, width: int, height: int) -> tuple:
         """Fits the image to a given width and height.
@@ -90,7 +87,7 @@ class ImageManager:
         """Returns the size of the current image as a tuple.
         \n*args: None | **kwargs: None
         """
-        return (self._width_image, self._height_image)
+        return (self._width_image != 0 and self._width_image or 400, self._width_image != 0 and self._width_image or 400)
 
 
 im = ImageManager()
@@ -119,6 +116,9 @@ class App(ctk.CTk):
 
         x_slider = Slider(master=main_frame, position=(24, 125))
         y_slider = Slider(master=main_frame, position=(24, 175))
+        
+        x_entry = NumberField(master=main_frame, size=(120,24), position=(210,103))
+        y_entry = NumberField(master=main_frame, size=(120,24), position=(210,153))
 
         FramesSeperator(self)
 
@@ -129,28 +129,33 @@ class App(ctk.CTk):
         # Callbacks                                      #
         ##################################################
 
-        def set_option_access(access: bool):
-            """ """
-            for item in [x_slider, y_slider]:
-                if isinstance(item, ctk.CTkSlider):
-                    item.set(0)
-                    item.configure(to=im.get_image_size()[1] or 1)
+        def set_option_access(access: bool) -> None:
+            """Disables/Enables the UI Elements.
+                \naccess: bool (Enable or Disable)
+                \n*args: None | **kwargs: None
+            """
+
+            for item in [x_slider, x_entry, y_slider, y_entry]:
                 item.configure(state=(access and "normal" or "disabled"))
+                if isinstance(item, Slider):
+                    item.set(0)
+                    item.configure(to=im.get_image_size()[1] or 400)
+                elif isinstance(item, NumberField):
+                    item.configure(placeholder_text=f'0-{im.get_image_size()[1] == 0 and 400 or im.get_image_size()[1]}')
 
         set_option_access(access=False)
+
 
         def refresh_closure() -> Callable:
             last_call = time()
             image = im.get_orig_image()
 
-            def refresh_image(_):
+            def refresh_image(_) -> None:
                 nonlocal last_call, image
-                if time() - last_call < 0.033:
-                    print("debounce")
+                if time() - last_call < (1/120):
                     return
 
                 last_call = time()
-                print("undebounce")
 
                 x_pos, y_pos = x_slider.get(), y_slider.get()
 
@@ -183,12 +188,12 @@ class App(ctk.CTk):
 
         ref_fun = refresh_closure()
 
-        def open_image():
+        def open_image() -> None:
             """Callback for file_button, manages the image selection.
             *args: None | **kwargs: None
             """
 
-            if im.get_image_size() == (0, 0):
+            if im.get_image().size == (0, 0):
                 file_path = ctk.filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.jfif")])
 
                 if file_path:

@@ -1,4 +1,5 @@
 """Required UI Elements for Liquimager."""
+
 import customtkinter as ctk
 
 COLORS = {
@@ -9,7 +10,7 @@ COLORS = {
     'MainText': '#FFFFFF',
     'AltText': '#666666',
     'Window': '#242424',
-    'MainFrame': '#2b2b2b',
+    'MainFrame': '#2B2B2B',
     'AltFrame': '#444444'
 }
 
@@ -29,6 +30,88 @@ class Label(ctk.CTkLabel):
             corner_radius = 12
         )
         self.place(x = position[0], y = position[1])
+
+
+class Slider(ctk.CTkSlider):
+    """Slider for adjusting the position of the text.
+        \nmaster: The pareadnt UI element.
+        \nposition: The position of the slider (an xy tuple).
+        \n*args: None | **kwargs: None
+    """
+    def __init__(self, master: ctk.CTkBaseClass, position: tuple):
+        super().__init__(
+            master,
+            from_                = 0,
+            to                   = 400,
+            number_of_steps      = 400,
+            width                = 312,
+            height               = 18,
+            corner_radius        = 12,
+            orientation          = 'horizontal',
+            bg_color             = 'transparent',
+            fg_color             = COLORS['AltFrame'],
+            button_color         = COLORS['AltButton'],
+            progress_color       = COLORS['MainButton'],
+            button_hover_color   = COLORS['AltButtonHover'],
+            button_corner_radius = 12
+        )
+        self.place(x = position[0], y = position[1])
+
+
+class TextField(ctk.CTkEntry):
+    """Text field for entering text.
+        \nmaster: The parent UI element.
+        \nsize: The size of the text field
+        \nposition: The position of the text field (an xy tuple).
+        \n*args: None | **kwargs: None
+    """
+    def __init__(self, master: ctk.CTkBaseClass, size: tuple, position: tuple):
+        super().__init__(
+            master,
+            width                  = size[0],
+            height                 = size[1],
+            corner_radius          = 5, 
+            border_width           = 2,
+            bg_color               = 'transparent',
+            fg_color               = COLORS['MainFrame'],
+            placeholder_text_color = COLORS['AltFrame'],
+            text_color             = COLORS['MainText'],
+            border_color           = COLORS['AltFrame'],
+            placeholder_text       = '0-400',
+            font                   = ('Montserrat', 12)
+        )
+        self.place(x = position[0], y = position[1])
+
+
+class NumberField(ctk.CTkEntry):
+    """Number field for entering an integer.
+        \nmaster: The parent UI element.
+        \nsize: The size of the text field
+        \nposition: The position of the text field (an xy tuple).
+        \n*args: None | **kwargs: None
+    """
+    def __init__(self, master: ctk.CTkBaseClass, size: tuple, position: tuple):
+        super().__init__(
+            master,
+            width                  = size[0],
+            height                 = size[1],
+            corner_radius          = 5, 
+            border_width           = 2,
+            bg_color               = 'transparent',
+            fg_color               = COLORS['MainFrame'],
+            placeholder_text_color = COLORS['AltFrame'],
+            text_color             = COLORS['MainText'],
+            border_color           = COLORS['AltFrame'],
+            placeholder_text       = '0-400',
+            font                   = ('Montserrat', 12),
+            validate               = 'key',
+            validatecommand        = (master.register(self.validate_input), '%S')
+        )
+        self.place(x = position[0], y = position[1])
+
+    def validate_input(self, input_text):
+        return input_text.isdigit()
+
 
 class FileButton(ctk.CTkButton):
     """Button, for selecting an image file/removing selected image file.
@@ -66,30 +149,6 @@ class FileButtonSeperator(ctk.CTkFrame):
         )
         self.place(x = 30, y = 89)
 
-class Slider(ctk.CTkSlider):
-    """Slider for adjusting the position of the text.
-        \nmaster: The pareadnt UI element.
-        \nposition: The position of the slider (an xy tuple).
-        \n*args: None | **kwargs: None
-    """
-    def __init__(self, master: ctk.CTkBaseClass, position: tuple):
-        super().__init__(
-            master,
-            from_                = 0,
-            to                   = 400,
-            number_of_steps      = 400,
-            width                = 312,
-            height               = 18,
-            corner_radius        = 12,
-            orientation          = 'horizontal',
-            bg_color             = 'transparent',
-            fg_color             = COLORS['AltFrame'],
-            button_color         = COLORS['AltButton'],
-            progress_color       = COLORS['MainButton'],
-            button_hover_color   = COLORS['AltButtonHover'],
-            button_corner_radius = 12
-        )
-        self.place(x = position[0], y = position[1])
 
 class MainFrame(ctk.CTkFrame):
     """Main Frame, that will contain all the main buttons.
@@ -100,6 +159,7 @@ class MainFrame(ctk.CTkFrame):
         super().__init__(master, corner_radius = 24, width = 360, height = 560)
         self.place(x = 20, y = 20)
 
+
 class FramesSeperator(ctk.CTkFrame):
     """Frames Seperator, that will separate the main frame from the image frame.
         \nmaster: The parent UI element.
@@ -108,6 +168,7 @@ class FramesSeperator(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk):
         super().__init__(master, corner_radius = 8, width = 4, height = 560)
         self.place(x = 398, y = 20)
+
 
 class ImageLabel(ctk.CTkLabel):
     """Label, that will display the selected image.
@@ -125,6 +186,7 @@ class ImageLabel(ctk.CTkLabel):
         )
         self.place(x = 20, y = 20)
         self.image = None
+
 
 class ImageFrame(ctk.CTkFrame):
     """Image Frame, that will contain the image preview.
