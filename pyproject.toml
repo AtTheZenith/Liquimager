@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "customtkinter<6,>=5",
-    "pillow<11,>=10"
+    "customtkinter>=5,<6",
+    "pillow>=10,<11",
+    "numexpr>=2,<3"
 ]
